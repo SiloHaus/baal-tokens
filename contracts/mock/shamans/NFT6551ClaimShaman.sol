@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../../interfaces/IERC6551Registry.sol";
-import "../../interfaces/IERC6551Account.sol";
 
 error NotVault();
 error AlreadyClaimed();
@@ -23,7 +22,7 @@ contract NFT6551ClaimerShaman is Initializable {
     address public vault;
 
     IERC6551Registry public registry;
-    IERC6551Account public tbaImp;
+    address public tbaImp;
     IERC721 public nft;
 
     bool public paused;
@@ -48,7 +47,7 @@ contract NFT6551ClaimerShaman is Initializable {
             .decode(_initParams, (address, address, address, uint256, uint256));
         nft = IERC721(_nftAddress);
         registry = IERC6551Registry(_registry);
-        tbaImp = IERC6551Account(payable(_tbaImp));
+        tbaImp = payable(_tbaImp);
         lootPerNft = _lootPerNft;
         sharesPerNft = _sharesPerNft;
     }
@@ -75,8 +74,8 @@ contract NFT6551ClaimerShaman is Initializable {
     }
 
     function _getTBA(uint256 _tokenId) private view returns (address) {
-        uint256 _salt = 0;
-        return registry.account(address(tbaImp), block.chainid, address(nft), _tokenId, _salt);
+        bytes32 _salt = 0;
+        return registry.account(tbaImp, _salt, block.chainid, address(nft), _tokenId);
     }
 
     function _calculate() private view returns (uint256 _total) {
