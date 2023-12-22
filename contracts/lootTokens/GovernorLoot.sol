@@ -28,9 +28,10 @@ contract GovernorLoot is
 
     /// @notice Configure loot - called by Baal on summon
     /// @dev initializer should prevent this from being called again
-    /// @param name_ Name for ERC20 token trackers
-    /// @param symbol_ Symbol for ERC20 token trackers
-    function setUp(string memory name_, string memory symbol_) external initializer {
+    /// @param params setup params
+    function setUp(bytes calldata params) external initializer {
+        (string memory name_, string memory symbol_) = abi.decode(params, (string, string));
+
         require(bytes(name_).length != 0, "loot: name empty");
         require(bytes(symbol_).length != 0, "loot: symbol empty");
 
