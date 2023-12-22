@@ -11,6 +11,8 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "@daohaus/baal-contracts/contracts/interfaces/IBaal.sol";
 
+error AlreadyInitialMinted();
+
 contract GovernorLoot is
     ERC20SnapshotUpgradeable,
     ERC20PermitUpgradeable,
@@ -18,6 +20,8 @@ contract GovernorLoot is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
+    bool public _initialMintingLocked;
+
     constructor() {
         _disableInitializers();
     }
@@ -80,6 +84,35 @@ contract GovernorLoot is
     /// @param amount Amount to burn
     function burn(address account, uint256 amount) external onlyOwner {
         _burn(account, amount);
+    }
+
+    /// @notice function to mint initial loot.
+    /// can oly be run once then minting is locked going forward
+    /// first 2 amounts in the array are reserved for the vault and the claim shaman
+    /// any furture distributions will be done after that offset
+    /// @dev can only be called once
+    /// @param vault Address to receive vault loot (zero index)
+    /// @param claimShaman Address to receive claim shaman loot (one index)
+    /// @param params setup params
+    function initialMint(address vault, address claimShaman, bytes memory params) external onlyOwner {
+        if (_initialMintingLocked) {
+            revert AlreadyInitialMinted();
+        }
+
+        (, , address[] memory initialHolders, uint256[] memory initialAmounts) = abi.decode(
+            params,
+            (string, string, address[], uint256[])
+        );
+
+        _initialMintingLocked = true;
+        if (initialAmounts.length > 1) {
+            _mint(vault, initialAmounts[0]);
+            _mint(claimShaman, initialAmounts[1]);
+        }
+
+        for (uint256 i = 0; i < initialHolders.length; i++) {
+            _mint(initialHolders[i], initialAmounts[i + 2]);
+        }
     }
 
     /// @notice Internal hook to restrict token transfers unless allowed by baal
