@@ -89,13 +89,8 @@ contract NFT6551ClaimerShamanV2 is Initializable {
 
     function _deployTBA(uint256 _tokenId) private returns (address accountAddress) {
         bytes32 _salt = 0;
-
-        try registry.createAccount(tbaImp, _salt, block.chainid, address(nft), _tokenId) returns (address account) {
-            AccountProxy(payable(account)).initialize(address(upgradableImplementation));
-            accountAddress = account;
-        } catch {
-            accountAddress = _getTBA(_tokenId);
-        }
+        accountAddress = registry.createAccount(tbaImp, _salt, block.chainid, address(nft), _tokenId);
+        try AccountProxy(payable(accountAddress)).initialize(address(upgradableImplementation)) {} catch {}
     }
 
     function _calculate() private view returns (uint256 _total) {
