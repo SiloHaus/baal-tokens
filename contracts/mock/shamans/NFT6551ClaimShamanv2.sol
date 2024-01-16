@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../../interfaces/IERC6551Registry.sol";
-import "../ERC6551/AccountProxy.sol";
+import "../ERC6551/interfaces/IAccountProxy.sol";
 
 error NotVault();
 error AlreadyClaimed();
@@ -90,7 +90,7 @@ contract NFT6551ClaimerShamanV2 is Initializable {
     function _deployTBA(uint256 _tokenId) private returns (address accountAddress) {
         bytes32 _salt = 0;
         accountAddress = registry.createAccount(tbaImp, _salt, block.chainid, address(nft), _tokenId);
-        try AccountProxy(payable(accountAddress)).initialize(address(upgradableImplementation)) {} catch {}
+        try IAccountProxy(payable(accountAddress)).initialize(address(upgradableImplementation)) {} catch {}
     }
 
     function _calculate() private view returns (uint256 _total) {
