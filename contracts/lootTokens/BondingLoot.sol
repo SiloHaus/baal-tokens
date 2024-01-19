@@ -12,8 +12,13 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@daohaus/baal-contracts/contracts/interfaces/IBaal.sol";
 
 error AlreadyInitialMinted();
+error InsufficientValue(uint256 cost, uint256 value);
+error EtherTransferFailed(address recipient, uint256 amount);
+error BurnAmountTooHigh(uint256 balance, uint256 amount);
+error NotSupported();
+error OnlyWholeTokens();
 
-contract GovernorLoot is
+contract BondingLoot is
     ERC20SnapshotUpgradeable,
     ERC20PermitUpgradeable,
     PausableUpgradeable,
@@ -21,6 +26,9 @@ contract GovernorLoot is
     UUPSUpgradeable
 {
     bool public _initialMintingLocked;
+
+    event Mint(address indexed account, uint256 amount, uint256 totalSupply);
+    event Burn(address indexed account, uint256 amount, uint256 totalSupply);
 
     constructor() {
         _disableInitializers();
@@ -71,20 +79,100 @@ contract GovernorLoot is
         _unpause();
     }
 
-    /// @notice Baal-only function to mint loot.
+    /// @notice Baal-only function to mint loot. notsupported in fixed loot
     /// @param recipient Address to receive loot
     /// @param amount Amount to mint
-    function mint(address recipient, uint256 amount) external onlyOwner {
-        // can not be more than half the max because of totalsupply of loot and shares
-        require(totalSupply() + amount <= type(uint256).max / 2, "loot: cap exceeded");
-        _mint(recipient, amount);
+    function mint(address recipient, uint256 amount) external view onlyOwner {
+        // should revert
+        revert NotSupported();
     }
 
-    /// @notice Baal-only function to burn loot.
-    /// @param account Address to lose loot
-    /// @param amount Amount to burn
-    function burn(address account, uint256 amount) external onlyOwner {
-        _burn(account, amount);
+    function mint(uint256 amount_) external payable {
+        if (amount_ % (10 ** decimals()) != 0) {
+            revert OnlyWholeTokens();
+        }
+        uint256 cost = mintCost(amount_);
+
+        if (msg.value < cost) {
+            revert InsufficientValue(cost, msg.value);
+        }
+
+        _mint(msg.sender, amount_);
+
+        if (msg.value > cost) {
+            (bool sent, ) = msg.sender.call{ value: msg.value - cost }("");
+            if (!sent) {
+                revert EtherTransferFailed(msg.sender, msg.value - cost);
+            }
+        }
+
+        emit Mint(msg.sender, amount_, totalSupply());
+    }
+
+    function burn(address account, uint256 amount_) external onlyOwner {
+        if (amount_ > balanceOf(account)) {
+            revert BurnAmountTooHigh(balanceOf(account), amount_);
+        }
+        if (amount_ % (10 ** decimals()) != 0) {
+            revert OnlyWholeTokens();
+        }
+
+        // Calculate refund before burn, to use the totalSupply before the burn
+        uint256 proceeds = burnProceeds(amount_);
+
+        _burn(account, amount_);
+
+        // TODO: this should go to a DAO vault instead of the owner (dao contract)
+        uint256 fee = daoFee(proceeds);
+        (bool feeSent, ) = owner().call{ value: daoFee(fee) }("");
+        if (!feeSent) {
+            revert EtherTransferFailed(account, proceeds - fee);
+        }
+
+        (bool sent, ) = account.call{ value: proceeds }("");
+        if (!sent) {
+            revert EtherTransferFailed(account, proceeds);
+        }
+
+        emit Burn(account, amount_, totalSupply());
+    }
+
+    function mintCost(uint256 amount_) public view returns (uint256) {
+        if (amount_ % (10 ** decimals()) != 0) {
+            revert OnlyWholeTokens();
+        }
+        // The sum of the prices of all tokens already minted
+        uint256 sumPricesCurrentTotalSupply = _sumOfPriceToNTokens(totalSupply());
+        // The sum of the prices of all the tokens already minted + the tokens to be newly minted
+        uint256 sumPricesNewTotalSupply = _sumOfPriceToNTokens(totalSupply() + amount_);
+
+        return sumPricesNewTotalSupply - sumPricesCurrentTotalSupply;
+    }
+
+    function burnProceeds(uint256 amount_) public view returns (uint256) {
+        if (amount_ % (10 ** decimals()) != 0) {
+            revert OnlyWholeTokens();
+        }
+        // The sum of the prices of all the tokens already minted
+        uint256 sumBeforeBurn = _sumOfPriceToNTokens(totalSupply());
+        // The sum of the prices of all the tokens after burning amount_
+        uint256 sumAfterBurn = _sumOfPriceToNTokens(totalSupply() - amount_);
+
+        return sumBeforeBurn - sumAfterBurn;
+    }
+
+    function daoFee(uint256 amount_) public view returns (uint256) {
+        return amount_ / 100;
+    }
+
+    // function (10 ** decimals()) public view override returns (uint8) {
+    //     return 0;
+    // }
+
+    // The price of *all* tokens from number 1 to n.
+    function _sumOfPriceToNTokens(uint256 n) internal view returns (uint256) {
+        uint256 n_ = n / (10 ** decimals());
+        return ((n_ * (n_ + 1) * (2 * n_ + 1)) / 6);
     }
 
     /// @notice function to mint initial loot.

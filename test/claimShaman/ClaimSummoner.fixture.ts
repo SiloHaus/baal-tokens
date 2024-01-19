@@ -10,7 +10,7 @@ import { BigNumberish, ContractTransaction } from "ethers";
 import { ethers, getUnnamedAccounts } from "hardhat";
 import { Log } from "hardhat-deploy/types";
 
-import { ERC6551Registry, HOSBase, MintableNFT } from "../../types";
+import { AccountGuardian, AccountProxy, AccountV3Upgradable, AccountV3a, ERC6551Registry, HOSBase, MintableNFT } from "../../types";
 
 export const abiCoder = ethers.utils.defaultAbiCoder;
 
@@ -44,6 +44,16 @@ export const setUpNftand6551 = async () => {
   const [s1, s2, s3] = await getUnnamedAccounts();
   const nft = (await ethers.getContract("MintableNFT")) as MintableNFT;
   const ERC6551Reg = (await ethers.getContract("ERC6551Registry")) as ERC6551Registry;
+  const accountV3 = (await ethers.getContract("AccountV3")).address;
+  const forwarder = ethers.constants.AddressZero;
+  const guardian = (await ethers.getContract("AccountGuardian")).address;
+  const upgradableImplementation = (await ethers.getContract("AccountV3Upgradable")) as AccountV3Upgradable;
+  const accountProxy = (await ethers.getContract("AccountProxy")) as AccountProxy;
+  // guardian = new AccountGuardian(address(this));
+
+  //       upgradableImplementation = new AccountV3Upgradable(
+  //           address(1), address(forwarder), address(registry), address(guardian)
+  //       );
   await mintNfts(nft.address, [s1, s2, s3]);
   return { nft: nft.address, ERC6551Reg: ERC6551Reg.address };
 };
@@ -66,7 +76,7 @@ export const setUpNftand6551 = async () => {
 //   return await baal.processProposal(id, encodedAction);
 // };
 
-export const encodeMockClaimShamanParams = function (nftAddress: string, registry: string, tbaImp: string) {
+export const encodeMockClaimShamanParams = function (nftAddress: string, registry: string, tbaImp: string, tbaProxy: string) {
   // address _nftAddress,
   // address _registry,
   // address _tbaImp,
@@ -76,8 +86,8 @@ export const encodeMockClaimShamanParams = function (nftAddress: string, registr
   const sharesPerNft = ethers.utils.parseEther("1").toString();
 
   const shamanParams = abiCoder.encode(
-    ["address", "address", "address", "uint256", "uint256"],
-    [nftAddress, registry, tbaImp, perNft, sharesPerNft],
+    ["address", "address", "address", "address", "uint256", "uint256"],
+    [nftAddress, registry, tbaImp, tbaProxy, perNft, sharesPerNft],
   );
   return shamanParams;
 };

@@ -20,6 +20,9 @@ describe("ClaimSummoner", function () {
     let sidecarVault = "";
     let nftAddress = "";
     let erc6551RegAddress = "";
+    let erc655tbaimpAddress = "";
+    let erc655tbaproxyAddress = "";
+
     let summoner: FixedLootShamanSummoner;
 
     beforeEach(async function () {
@@ -87,7 +90,7 @@ describe("ClaimSummoner", function () {
             },
             shamanConfig: {
               permissions: [SHAMAN_PERMISSIONS.MANAGER],
-              setupParams: [encodeMockClaimShamanParams(nftAddress, erc6551RegAddress, ethers.constants.AddressZero)],
+              setupParams: [encodeMockClaimShamanParams(nftAddress, erc6551RegAddress, ethers.constants.AddressZero, ethers.constants.AddressZero)],
               singletonAddress: [mockShamanSingleton.address],
             },
           });
