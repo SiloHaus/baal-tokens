@@ -5,15 +5,17 @@ const deployFn: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployments, network } = hre;
   const { deployer } = await hre.getNamedAccounts();
 
-  console.log("\nDeploying FixedLoot singleton on network:", network.name);
+  console.log("\nDeploying GovernorLoot singleton on network:", network.name);
+  console.log("\nDeploying from address", deployer);
+
 
   const governorLootDeployed = await deployments.deploy("GovernorLoot", {
     contract: "GovernorLoot",
     from: deployer,
     args: [],
     // proxy: {
-    //     proxyContract: 'UUPS',
-    //     methodName: 'initialize',
+    //   proxyContract: "UUPS",
+    //   methodName: "initialize",
     // },
     log: true,
   });
