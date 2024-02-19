@@ -13,11 +13,11 @@ interface IPoster {
 }
 
 contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
-    string public constant shamanName = "NFTCuratorShaman";
-    uint256 private _nextTokenId = 1;
-    string private _imageUri = "bafybeih6r3rpmbjmk5ys3y42rzcqe36vpnxydmehp3dyydexcmofredl6e/DAOsSuck.png";
-    string private _animationUri = "bafybeig32nyuekisumy7ozyhdrrbi5rqwfsnltniumlj76vmtwi4xhcw6y";
-    string private _externalUri = "bafybeig32nyuekisumy7ozyhdrrbi5rqwfsnltniumlj76vmtwi4xhcw6y";
+    string public constant shamanName = "NFTCuratorShamanV0.1";
+    uint256 private _nextTokenId;
+    string private _imageUri;
+    string private _animationUri;
+    string private _externalUri;
     IPoster public _poster;
     IBaal public _baal;
     uint256 public _price; // 420000000000000;
@@ -42,19 +42,20 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
             uint256 creatorShares,
             uint256 collectorLoot,
             uint256 price,
-            uint256 authorFee,
-            address author,
-            string memory content
-        ) = abi.decode(_initParams, (string, string, uint256, uint256, uint256, uint256, address, string));
+            uint256 authorFee
+        ) = abi.decode(_initParams, (string, string, uint256, uint256, uint256, uint256));
         _baal = IBaal(_moloch);
         _price = price;
         _authorFee = authorFee;
         _creatorShares = creatorShares;
         _collectorLoot = collectorLoot;
         _poster = IPoster(0x000000000000cd17345801aa8147b8D3950260FF);
+        _imageUri = "";
+        _animationUri = "";
+        _externalUri = "";
+        _nextTokenId = 1;
         __Ownable_init();
         __ERC721_init(name, symbol);
-        introPost(author, content);
         transferOwnership(_moloch);
     }
 
@@ -88,17 +89,6 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
 
     function setCreatorShares(uint256 creatorShares) public onlyOwner {
         _creatorShares = creatorShares;
-    }
-
-    function introPost(address to, string memory content) public onlyInitializing {
-        // only durring setup
-        // maybe nft to factory dao
-        uint256 tokenId = _nextTokenId++;
-        bytes32 hash = keccak256(abi.encodePacked(content));
-        posts[hash] = tokenId;
-        chashes[tokenId] = hash;
-        _safeMint(to, tokenId);
-        _poster.post(content, "daohaus.member.database");
     }
 
     function post(address to, bytes32 postId, string memory content) public {
@@ -152,7 +142,7 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
      * param: _tokenId the tokenId
      */
     function _constructTokenURI(uint256 tokenId) internal view returns (string memory) {
-        string memory _nftName = string(abi.encodePacked("WordSmiths"));
+        string memory _nftName = string(abi.encodePacked(name()));
         string memory _image = string(abi.encodePacked("ipfs://", _imageUri));
         string memory _externalUrl = string(abi.encodePacked("ipfs://", _externalUri));
         string memory _animation = string(
@@ -161,8 +151,8 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
                 _animationUri,
                 "?tokenId=",
                 Strings.toString(tokenId),
-                "&chash=",
-                string(abi.encodePacked(chashes[tokenId])),
+                // "&chash=",
+                // string(abi.encodePacked(chashes[tokenId])),
                 "&parent=",
                 Strings.toString(mints[tokenId])
             )
@@ -183,7 +173,10 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
                                 _externalUrl,
                                 '", "animation_url":"',
                                 _animation,
-                                '", "description": "Wordsmiths NFT", "attributes": [{"trait_type": "base", "value": "post"}]}'
+                                '", "description": DIN "',
+                                _nftName,
+                                '", ',
+                                '"attributes": [{"trait_type": "base", "value": "post"}]}'
                             )
                         )
                     )

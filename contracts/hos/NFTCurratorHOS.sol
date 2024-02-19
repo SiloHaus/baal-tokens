@@ -54,7 +54,7 @@ contract NFTCurratorShamanSummoner is HOSBase {
             ),
             postInitActions,
             saltNonce, // salt nonce
-            bytes32(bytes("DHNFTCurratorShamanSummoner")) // referrer
+            bytes32(bytes("DHNFTCurratorShamanSummonerV0.1")) // referrer
         );
     }
 
