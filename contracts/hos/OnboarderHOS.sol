@@ -109,6 +109,14 @@ contract OnboarderShamanSummoner is HOSBase {
         emit DeployBaalToken(token);
     }
 
+    function deployShamans(
+        bytes[] memory postInitializationActions,
+        bytes memory initializationShamanParams,
+        bytes32 saltNonce
+    ) internal override returns (bytes[] memory actions, address[] memory shamanAddresses) {
+        (actions, shamanAddresses) = super.deployMultiShamans(postInitializationActions, initializationShamanParams);
+    }
+
     /**
      * @dev setsup the already deployed onboarder shaman with init params
      * @param initializationShamanParams [shaman, nonce, [uint256 _expiry, uint256 _multiply, uint256 _minTribute, bool _isShares]]

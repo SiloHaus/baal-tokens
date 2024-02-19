@@ -70,17 +70,17 @@ contract HOSBase is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         bytes[] memory postInitializationActions,
         uint256 saltNonce
     ) external virtual returns (address) {
+        address predictedBaalAddress = calculateBaalAddress(saltNonce);
         //
-        address lootToken = deployLootToken(initializationLootTokenParams);
+        address lootToken = deployLootToken(initializationLootTokenParams, predictedBaalAddress);
 
-        address sharesToken = deploySharesToken(initializationShareTokenParams);
+        address sharesToken = deploySharesToken(initializationShareTokenParams, predictedBaalAddress);
 
         (bytes[] memory amendedPostInitActions, address[] memory shamans) = deployShamans(
             postInitializationActions,
-            initializationShamanParams
+            initializationShamanParams,
+            bytes32(saltNonce)
         );
-
-        // address predictedBaalAddress = calculateBaalAddress(saltNonce);
 
         // summon baal with new tokens
         (address baal, address vault) = summon(amendedPostInitActions, lootToken, sharesToken, saltNonce);
@@ -88,8 +88,6 @@ contract HOSBase is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         // console.log("baal >>", baal, predictedBaalAddress);
         // post deploy hooks
         postDeployShamanActions(initializationShamanParams, lootToken, sharesToken, shamans, baal, vault);
-        postDeployLootActions(initializationLootTokenParams, lootToken, sharesToken, shamans, baal, vault);
-        postDeploySharesActions(initializationShareTokenParams, lootToken, sharesToken, shamans, baal, vault);
 
         return baal;
     }
@@ -126,44 +124,28 @@ contract HOSBase is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address vault
     ) internal virtual {}
 
-    function postDeployLootActions(
-        bytes calldata initializationLootParams,
-        address lootToken,
-        address sharesToken,
-        address[] memory shamans,
-        address baal,
-        address vault
-    ) internal virtual {
-        // change token ownership to baal
-        IBaalToken(lootToken).transferOwnership(address(baal));
-    }
-
-    function postDeploySharesActions(
-        bytes calldata initializationSharesParams,
-        address lootToken,
-        address sharesToken,
-        address[] memory shamans,
-        address baal,
-        address vault
-    ) internal virtual {
-        // change token ownership to baal
-        IBaalToken(sharesToken).transferOwnership(address(baal));
-    }
-
     /**
      * @dev deployLootToken
      * @param initializationParams The parameters for deploying the token
      */
-    function deployLootToken(bytes calldata initializationParams) internal virtual returns (address token) {
-        return deployToken(initializationParams);
+    function deployLootToken(
+        bytes calldata initializationParams,
+        address initialOwner
+    ) internal virtual returns (address token) {
+        token = deployToken(initializationParams);
+        IBaalToken(token).transferOwnership(initialOwner);
     }
 
     /**
      * @dev deploySharesToken
      * @param initializationParams The parameters for deploying the token
      */
-    function deploySharesToken(bytes calldata initializationParams) internal virtual returns (address token) {
-        return deployToken(initializationParams);
+    function deploySharesToken(
+        bytes calldata initializationParams,
+        address initialOwner
+    ) internal virtual returns (address token) {
+        token = deployToken(initializationParams);
+        IBaalToken(token).transferOwnership(initialOwner);
     }
 
     /**
@@ -183,6 +165,47 @@ contract HOSBase is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         emit DeployBaalToken(token);
     }
 
+    function deployShamans(
+        bytes[] memory postInitializationActions,
+        bytes memory initializationShamanParams,
+        bytes32 saltNonce
+    ) internal virtual returns (bytes[] memory, address[] memory shamanAddresses) {}
+
+    function deployPredeterminedShaman(
+        bytes[] memory postInitializationActions,
+        bytes memory initializationShamanParams,
+        bytes32 saltNonce
+    ) internal virtual returns (bytes[] memory, address[] memory) {
+        (address shamanTemplate, uint256 shamanPermission, ) = abi.decode(
+            initializationShamanParams,
+            (address, uint256, bytes[])
+        );
+
+        uint256 actionsLength = postInitializationActions.length;
+        // amend postInitializationActions to include setShamans
+        bytes[] memory amendedPostInitActions = new bytes[](actionsLength + 1);
+
+        require(shamanTemplate != address(0), "HOS: shamanTemplates address is zero");
+        // Clones because it should not need to be upgradable
+        IShaman shaman = IShaman(payable(Clones.cloneDeterministic(shamanTemplate, saltNonce)));
+        address[] memory shamanAddresses = new address[](1);
+        shamanAddresses[0] = address(shaman);
+        uint256[] memory shamanPermissions = new uint256[](1);
+        shamanPermissions[0] = shamanPermission;
+
+        // copy over the rest of the actions
+        for (uint256 i = 0; i < actionsLength; i++) {
+            amendedPostInitActions[i] = postInitializationActions[i];
+        }
+        amendedPostInitActions[actionsLength] = abi.encodeWithSignature(
+            "setShamans(address[],uint256[])",
+            shamanAddresses,
+            shamanPermissions
+        );
+
+        return (amendedPostInitActions, shamanAddresses);
+    }
+
     /**
      * @dev deployShamans
      * the setShaman action is added to the postInitializationActions
@@ -191,7 +214,7 @@ contract HOSBase is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @param initializationShamanParams The parameters for deploying the shaman (address template, uint256 permissions, ) third peram is for poste deploy init
      *
      */
-    function deployShamans(
+    function deployMultiShamans(
         bytes[] memory postInitializationActions,
         bytes memory initializationShamanParams
     ) internal returns (bytes[] memory, address[] memory) {

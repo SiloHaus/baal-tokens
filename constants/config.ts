@@ -82,4 +82,12 @@ export const deploymentConfig: { [key: string]: Contracts & Ownable } = {
     shares: "",
     owner: "",
   },
+  "11155111": {
+    // sepolia
+    baalSummoner: "0xB2B3909661552942AE1115E9Fc99dF0BC93d71d0",
+    bvSummoner: "0x763f5c2E59f997A6cC48Bf1228aBf61325244702",
+    btSummoner: "0xD69e5B8F6FA0E5d94B93848700655A78DF24e387",
+    shares: "0x52acf023d38A31f7e7bC92cCe5E68d36cC9752d6",
+    owner: "0xCED608Aa29bB92185D9b6340Adcbfa263DAe075b",
+  },
 };

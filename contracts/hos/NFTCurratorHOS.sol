@@ -14,21 +14,16 @@ import "@daohaus/baal-contracts/contracts/interfaces/IBaalToken.sol";
 
 import "./HOSBase.sol";
 
-import "../interfaces/IBaalFixedToken.sol";
+import "../interfaces/IBaalGovToken.sol";
 
 // import "hardhat/console.sol";
 
-contract FixedLootShamanSummoner is HOSBase {
-    IBaalAndVaultSummoner public baalVaultSummoner;
-
-    function initialize(address _baalVaultSummoner, address _moduleProxyFactory) public override {
-        // baalAndVaultSummoner
-        require(_baalVaultSummoner != address(0), "zero address");
-        baalVaultSummoner = IBaalAndVaultSummoner(_baalVaultSummoner); //vault summoner
+contract NFTCurratorShamanSummoner is HOSBase {
+    function initialize(address _baalSummoner, address _moduleProxyFactory) public override {
         // standard baalSummoner
-        address baalSummoner = baalVaultSummoner._baalSummoner();
-        super.initialize(baalSummoner, _moduleProxyFactory);
-        emit SetSummoner(_baalVaultSummoner);
+        super.initialize(_baalSummoner, _moduleProxyFactory);
+        require(_baalSummoner != address(0), "zero address");
+        emit SetSummoner(_baalSummoner);
     }
 
     /**
@@ -47,10 +42,11 @@ contract FixedLootShamanSummoner is HOSBase {
         address sharesToken,
         uint256 saltNonce
     ) internal override returns (address baal, address vault) {
-        (baal, vault) = baalVaultSummoner.summonBaalAndVault(
+        vault = address(0);
+        baal = baalSummoner.summonBaalFromReferrer(
             abi.encode(
-                IBaalFixedToken(sharesToken).name(),
-                IBaalFixedToken(sharesToken).symbol(),
+                IBaalGovToken(sharesToken).name(),
+                IBaalGovToken(sharesToken).symbol(),
                 address(0), // safe (0 addr creates a new one)
                 address(0), // forwarder (0 addr disables feature)
                 lootToken,
@@ -58,38 +54,32 @@ contract FixedLootShamanSummoner is HOSBase {
             ),
             postInitActions,
             saltNonce, // salt nonce
-            bytes32(bytes("DHFixedLootShamanSummoner")), // referrer
-            string.concat(IBaalFixedToken(lootToken).symbol(), " ", "Vault") // name
+            bytes32(bytes("DHNFTCurratorShamanSummoner")) // referrer
         );
     }
 
     /**
-     * @dev deployLootToken
-     * loot token is using the FixedLoot Token
+     * @dev deploySharesToken
      * @param initializationParams The parameters for deploying the token
      */
     function deployLootToken(
         bytes calldata initializationParams,
         address initialOwner
     ) internal override returns (address token) {
-        (address template, bytes memory initParams) = abi.decode(initializationParams, (address, bytes));
-
-        // ERC1967 could be upgradable
-        token = address(
-            new ERC1967Proxy(template, abi.encodeWithSelector(IBaalFixedToken(template).setUp.selector, initParams))
-        );
-
-        IBaalFixedToken(token).transferOwnership(initialOwner);
-
-        emit DeployBaalToken(token);
+        token = super.deployToken(initializationParams);
+        IBaalGovToken(token).transferOwnership(initialOwner);
     }
 
-    function deployShamans(
-        bytes[] memory postInitializationActions,
-        bytes memory initializationShamanParams,
-        bytes32 saltNonce
-    ) internal override returns (bytes[] memory actions, address[] memory shamanAddresses) {
-        (actions, shamanAddresses) = super.deployMultiShamans(postInitializationActions, initializationShamanParams);
+    /**
+     * @dev deploySharesToken
+     * @param initializationParams The parameters for deploying the token
+     */
+    function deploySharesToken(
+        bytes calldata initializationParams,
+        address initialOwner
+    ) internal override returns (address token) {
+        token = super.deployToken(initializationParams);
+        IBaalGovToken(token).transferOwnership(initialOwner);
     }
 
     /**
@@ -118,6 +108,18 @@ contract FixedLootShamanSummoner is HOSBase {
         IShaman(shaman).setup(baal, vault, initShamanDeployParams[index]);
     }
 
+    function deployShamans(
+        bytes[] memory postInitializationActions,
+        bytes memory initializationShamanParams,
+        bytes32 saltNonce
+    ) internal override returns (bytes[] memory actions, address[] memory shamanAddresses) {
+        (actions, shamanAddresses) = super.deployPredeterminedShaman(
+            postInitializationActions,
+            initializationShamanParams,
+            saltNonce
+        );
+    }
+
     /**
      * @dev sets up the already deployed claim shaman with init params
      * shaman init params (address _nftAddress, address _registry, address _tbaImp, uint256 _perNft, uint256 _sharesPerNft)
@@ -141,5 +143,12 @@ contract FixedLootShamanSummoner is HOSBase {
         for (uint256 i = 0; i < shamans.length; i++) {
             setUpShaman(shamans[i], baal, vault, initializationShamanParams, i);
         }
+    }
+
+    function predictDeterministicShamanAddress(
+        address implementation,
+        uint256 salt
+    ) external view returns (address predicted) {
+        return Clones.predictDeterministicAddress(implementation, bytes32(salt), address(this));
     }
 }

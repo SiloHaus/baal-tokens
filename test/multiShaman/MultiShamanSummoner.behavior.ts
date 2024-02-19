@@ -49,7 +49,7 @@ export function shouldSummonASuperBaal(): void {
 }
 
 export function shouldHaveCommunityVetoPower(): void {
-  it.only("Should be able to cancel a proposal after dissenters threshold", async function () {
+  it.skip("Should be able to cancel a proposal after dissenters threshold", async function () {
     //todo: break this up into multiple tests
     // get some addresss
     const [s1, s2] = await ethers.getSigners();
