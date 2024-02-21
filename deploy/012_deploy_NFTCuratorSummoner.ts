@@ -8,7 +8,7 @@ const deployFn: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { getChainId, deployments, network } = hre;
   const { deployer } = await hre.getNamedAccounts();
 
-  console.log("\nDeploying NFTCurrator factory on network:", network.name);
+  console.log("\nDeploying NFTCurator factory on network:", network.name);
 
   const chainId = await getChainId();
   const setupAddresses = await getSetupAddresses(chainId, network, deployments);
@@ -24,8 +24,8 @@ const deployFn: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const summonerAddress =
     network.name === "hardhat" ? (await deployments.get("BaalSummoner")).address : addresses.baalSummoner;
 
-  const hosSummonerDeployed = await deployments.deploy("NFTCurratorShamanSummoner", {
-    contract: "NFTCurratorShamanSummoner",
+  const hosSummonerDeployed = await deployments.deploy("NFTCuratorShamanSummoner", {
+    contract: "NFTCuratorShamanSummoner",
     from: deployer,
     args: [],
     proxy: {
@@ -37,19 +37,19 @@ const deployFn: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     },
     log: true,
   });
-  console.log("NFTCurrator deployment Tx ->", hosSummonerDeployed.transactionHash);
+  console.log("NFTCurator deployment Tx ->", hosSummonerDeployed.transactionHash);
 
   // const owner = addresses?.owner || deployer;
-  // console.log("NFTCurrator transferOwnership to", owner);
+  // console.log("NFTCurator transferOwnership to", owner);
   // const txOwnership = await hre.deployments.execute(
-  //   "NFTCurrator",
+  //   "NFTCurator",
   //   {
   //     from: deployer,
   //   },
   //   "transferOwnership",
   //   owner,
   // );
-  // console.log("NFTCurrator transferOwnership Tx ->", txOwnership.transactionHash);
+  // console.log("NFTCurator transferOwnership Tx ->", txOwnership.transactionHash);
 
   // if (network.name !== "hardhat" && owner !== deployer && !addresses?.baalSummoner) {
   //   console.log("baalSummoner transferOwnership to", owner);
@@ -66,5 +66,5 @@ const deployFn: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 export default deployFn;
-deployFn.id = "012_deploy_NFTCurratorSummoner"; // id required to prevent reexecution
-deployFn.tags = ["Factories", "NFTCurratorSummoner"];
+deployFn.id = "012_deploy_NFTCuratorSummoner"; // id required to prevent reexecution
+deployFn.tags = ["Factories", "NFTCuratorSummoner"];

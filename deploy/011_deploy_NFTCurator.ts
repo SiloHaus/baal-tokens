@@ -8,7 +8,7 @@ const deployFn: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   console.log("\nDeploying NFTCuratorShaman singleton on network:", network.name);
   console.log("\nDeploying from address", deployer);
 
-  const governorLootDeployed = await deployments.deploy("NFTCuratorShaman", {
+  const nftShamanDeployed = await deployments.deploy("NFTCuratorShaman", {
     contract: "NFTCuratorShaman",
     from: deployer,
     args: [],
@@ -18,7 +18,7 @@ const deployFn: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     // },
     log: true,
   });
-  console.log("NFTCuratorShaman deployment Tx ->", governorLootDeployed.transactionHash);
+  console.log("NFTCuratorShaman deployment Tx ->", nftShamanDeployed.transactionHash);
 };
 
 export default deployFn;

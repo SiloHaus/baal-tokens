@@ -3,6 +3,8 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -12,8 +14,8 @@ interface IPoster {
     function post(string memory content, string memory tag) external;
 }
 
-contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
-    string public constant shamanName = "NFTCuratorShamanV0.1";
+contract NFTCuratorShaman is ERC721Upgradeable, ERC721EnumerableUpgradeable, OwnableUpgradeable {
+    string public constant shamanName = "NFTCuratorShamanV0.2";
     uint256 private _nextTokenId;
     string private _imageUri;
     string private _animationUri;
@@ -30,6 +32,11 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
     mapping(uint256 tokenId => uint256 parentId) public mints;
 
     mapping(uint256 parentId => uint256[] childIds) public childs;
+
+    struct ChildData {
+        uint256 tokenId;
+        address owner;
+    }
 
     function setup(
         address _moloch, // DAO address
@@ -55,8 +62,9 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
         _externalUri = "";
         _nextTokenId = 1;
         __Ownable_init();
+        __ERC721Enumerable_init();
         __ERC721_init(name, symbol);
-        transferOwnership(_moloch);
+        transferOwnership(_baal.target());
     }
 
     function setImageUri(string memory uri) public onlyOwner {
@@ -91,7 +99,16 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
         _creatorShares = creatorShares;
     }
 
-    function post(address to, bytes32 postId, string memory content) public {
+    function getAllChilds(uint256 parentId) public view returns (ChildData[] memory) {
+        ChildData[] memory childList = new ChildData[](childs[parentId].length);
+        for (uint256 i = 0; i < childs[parentId].length; i++) {
+            uint256 childId = childs[parentId][i];
+            childList[i] = ChildData(childId, ownerOf(childId));
+        }
+        return childList;
+    }
+
+    function post(address to, bytes32 postId, string memory content) public onlyOwner {
         // only though proposal
         uint256 tokenId = _nextTokenId++;
         posts[postId] = tokenId;
@@ -193,5 +210,20 @@ contract NFTCuratorShaman is ERC721Upgradeable, OwnableUpgradeable {
             revert("Non existent token");
         }
         return string(_constructTokenURI(tokenId));
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 firstTokenId,
+        uint256 batchSize
+    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+        super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
     }
 }

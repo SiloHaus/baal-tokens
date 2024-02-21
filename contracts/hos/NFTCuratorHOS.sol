@@ -18,7 +18,7 @@ import "../interfaces/IBaalGovToken.sol";
 
 // import "hardhat/console.sol";
 
-contract NFTCurratorShamanSummoner is HOSBase {
+contract NFTCuratorShamanSummoner is HOSBase {
     function initialize(address _baalSummoner, address _moduleProxyFactory) public override {
         // standard baalSummoner
         super.initialize(_baalSummoner, _moduleProxyFactory);
@@ -54,7 +54,7 @@ contract NFTCurratorShamanSummoner is HOSBase {
             ),
             postInitActions,
             saltNonce, // salt nonce
-            bytes32(bytes("DHNFTCurratorShamanSummonerV0.1")) // referrer
+            bytes32(bytes("DHNFTCuratorShamanSummonerV0.2")) // referrer
         );
     }
 

@@ -9,7 +9,7 @@ export const encodeMockVetoShamanParams = function () {
   return shamanParams;
 };
 
-export const encodeNFTCurratorShamanParams = function () {
+export const encodeNFTCuratorShamanParams = function () {
   const shamanParams = abiCoder.encode(
     ["string", "string", "uint256", "uint256", "uint256", "uint256", "address", "string"],
     [
